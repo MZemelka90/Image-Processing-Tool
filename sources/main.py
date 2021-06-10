@@ -2,13 +2,22 @@ import numpy as np
 from PIL import Image, ImageDraw
 from math import sqrt
 import glob
+import matplotlib.pyplot as plt
 from image_properties import ImagePreProcessing
 
 # Load all images in the folder 'Image folder'
 image_list = []
+im_array = []
 for filename in glob.glob(r'./../Image folder/*.bmp'):
     im = Image.open(filename)
     image_list.append(im)
+
+# Make arrays from the BMP information
+for i in range(len(image_list)):
+    im_array.append(np.array(image_list[i]))
+print(np.shape(im_array)[1])
+print(np.shape(im_array)[2])
+print(im_array[1][0][0])
 
 input_pixels = image_list[0].load()
 width, height = image_list[0].width, image_list[0].height
@@ -37,12 +46,18 @@ if len(np.shape(image_list[0])) == 3:
             # Draw in black and white the magnitude
             color = int(sqrt(magx**2 + magy**2))
             draw.point((x, y), (color, color, color))
-    #output_image.save(r'./../Image folder/output.bmp')
+    # output_image.save(r'./../Image folder/output.bmp')
 
-# Similiarty & mean_squared_error
-pre_proc = ImagePreProcessing(image_list)
-img_ssim, img_error = pre_proc.ssim_and_error(img1=0, img2=1)
+# Create difference Matrix from 2 or more Images
+diff_matrix_1 = np.zeros_like(im_array[0])
+diff_matrix_2 = np.zeros_like(im_array[0])
+for i in range(0, np.shape(im_array)[1]):
+    for j in range(0, np.shape(im_array)[2]):
+        diff_matrix_1[i][j] = abs(im_array[0][i][j] - im_array[1][i][j])
+        diff_matrix_2[i][j] = abs(im_array[0][i][j] - im_array[4][i][j])
 
-print(img_ssim)
+print(diff_matrix_1)
 
-
+plt.figure()
+plt.imshow(diff_matrix_2, cmap='gray')
+plt.show()
