@@ -1,20 +1,21 @@
 import numpy as np
-from PIL import Image, Imagedraw
+from PIL import Image, ImageDraw
 from skimage import data, img_as_float
 # load image
-input_image = Image.open(r'bild.png')
-input_pixels = input_image_load()
+file_name = 'ID0101_0001.bmp'
+input_image = Image.open(r'./../Image folder/' + file_name)
+input_pixels = input_image.load()
 width, height = input_image.width, input_image.height
 
 # Create output image
 output_image = Image.new("RGB", input_image.size)
-draw = Imagedraw.Draw(output_image)
+draw = ImageDraw.Draw(output_image)
 
 # convert to grayscale
 intensity = np.zeros((width, height))
 for x in range(width):
     for y in range(height):
-        intensity[x,y] = sum(input_pixels[x, y]) / 3
+        intensity[x, y] = sum(input_pixels[x, y]) / 3
 
 # Compute convolution between intensity and kernels
 for x in range(1, input_image.width -1):
