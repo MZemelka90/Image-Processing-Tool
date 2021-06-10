@@ -14,7 +14,7 @@ for filename in glob.glob(r'./../Image folder/*.bmp'):
 
 # Make arrays from the BMP information
 for i in range(len(image_list)):
-    im_array.append(np.array(image_list[i]))
+    im_array.append(np.array(image_list[i], dtype='int64'))
 print(np.shape(im_array)[1])
 print(np.shape(im_array)[2])
 print(im_array[1][0][0])
@@ -49,15 +49,13 @@ if len(np.shape(image_list[0])) == 3:
     # output_image.save(r'./../Image folder/output.bmp')
 
 # Create difference Matrix from 2 or more Images
-diff_matrix_1 = np.zeros_like(im_array[0])
-diff_matrix_2 = np.zeros_like(im_array[0])
+diff_matrix= np.zeros_like(im_array[0])
 for i in range(0, np.shape(im_array)[1]):
     for j in range(0, np.shape(im_array)[2]):
-        diff_matrix_1[i][j] = abs(im_array[0][i][j] - im_array[1][i][j])
-        diff_matrix_2[i][j] = abs(im_array[0][i][j] - im_array[4][i][j])
+        diff_matrix[i][j] = abs(im_array[0][i][j] - im_array[4][i][j])
 
-print(diff_matrix_1)
+print(diff_matrix)
 
 plt.figure()
-plt.imshow(diff_matrix_2, cmap='gray')
+plt.imshow(diff_matrix, cmap='gray')
 plt.show()
