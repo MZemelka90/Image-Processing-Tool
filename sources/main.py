@@ -18,7 +18,7 @@ for i in range(len(image_list)):
 
 print(np.shape(image_list[0]))
 # Create output image
-output_image = Image.new("RGB", input_image.size)
+output_image = Image.new("RGB", image_list[0].size)
 draw = ImageDraw.Draw(output_image)
 
 if len(np.shape(image_list[0])) == 3:
