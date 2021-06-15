@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import ImageDraw
+import io
 import PIL.Image
 from math import sqrt, pi, cos, sin
 from canny import canny_edge_detector
@@ -31,7 +32,7 @@ file = Menu(menubar, tearoff=0)
 menubar.add_cascade(label='File', menu=file)
 file.add_command(label='New File', command=None)
 file.add_command(label='Open...', command=lambda: open_file())
-file.add_command(label='Save', command=None)
+file.add_command(label='Save', command=lambda: save_diff_matrix())
 file.add_separator()
 file.add_command(label='Exit', command=Image_Processing.destroy)
 
@@ -63,9 +64,6 @@ def open_file():
         filepath.append(os.path.splitext(file_name[i])[0])
         filetype.append(os.path.splitext(file_name[i])[1])
         files.append(os.path.basename(file_name[i]))
-
-    print(file_name)
-    print(files)
     return filetype, files
 
 
@@ -114,6 +112,17 @@ def difference_matrix():
     return diff_matrix
 
 
+def save_diff_matrix():
+    file_types = [('All Files', '*.*'),
+             ('Image', '*.png'),
+             ('Bitmap', '*.bmp')]
+    output_file = tkinter.filedialog.asksaveasfile(filetypes=file_types)
+    output_file = output_file.name
+    print(output_file)
+    ax2.imshow(diff_matrix, cmap='gray')
+    figure_2.savefig(output_file)
+
+
 def detect_circles():
     pass
 
@@ -146,8 +155,23 @@ im_2.grid(row=3, column=1)
 im_2.insert(0, 1)
 Label(window1, text='Image #2', anchor=W).grid(row=3, column=0)
 
+pxpmmx = Entry(window1)
+pxpmmx.grid(row=5, column=1)
+pxpmmx.insert(0, 71)
+Label(window1, text='Pixel / mm -x', anchor=W).grid(row=5, column=0)
+
+pxpmmy = Entry(window1)
+pxpmmy.grid(row=6, column=1)
+pxpmmy.insert(0, 71)
+Label(window1, text='Pixel / mm -y', anchor=W).grid(row=6, column=0)
+
+FPS = Entry(window1)
+FPS.grid(row=7, column=1)
+FPS.insert(0, 1000)
+Label(window1, text='Frames per second', anchor=W).grid(row=7, column=0)
+
 # PlottingFrames
-windowPlot_1 = LabelFrame(Image_Processing, text='Plots', font=("Arial Bold", 12))
+windowPlot_1 = LabelFrame(Image_Processing, text='Plots Preprocessing', font=("Arial Bold", 12))
 windowPlot_1.grid(column=5, row=0, padx=10, pady=0)
 
 figure = plt.Figure(figsize=(6, 8), dpi=122)
@@ -156,7 +180,7 @@ ax1 = figure.add_subplot(111)
 chart_type = FigureCanvasTkAgg(figure, windowPlot_1)
 chart_type.get_tk_widget().grid(padx=50, pady=0, columnspan=2)
 
-windowPlot_2 = LabelFrame(Image_Processing, text='Plots', font=("Arial Bold", 12))
+windowPlot_2 = LabelFrame(Image_Processing, text='Plots Postprocessing', font=("Arial Bold", 12))
 windowPlot_2.grid(column=7, row=0, padx=10, pady=0)
 
 figure_2 = plt.Figure(figsize=(6, 8), dpi=122)
