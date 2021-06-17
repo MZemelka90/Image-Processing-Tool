@@ -1,9 +1,12 @@
 import numpy as np
 from PIL import Image, ImageDraw
-from math import sqrt
+from math import sqrt, pi, cos, sin
+from canny import canny_edge_detector
+from collections import defaultdict
 import glob
+import cv2
 import matplotlib.pyplot as plt
-from image_properties import ImagePreProcessing
+
 
 # Load all images in the folder 'Image folder'
 image_list = []
@@ -26,36 +29,60 @@ for i in range(len(image_list)):
     print(image_list[i].format, image_list[i].size, image_list[i].mode)
 
 print(np.shape(image_list[0]))
-# Create output image
-output_image = Image.new("RGB", image_list[0].size)
-draw = ImageDraw.Draw(output_image)
-
-if len(np.shape(image_list[0])) == 3:
-    # convert to grayscale
-    intensity = np.zeros((width, height))
-    for x in range(width):
-        for y in range(height):
-            intensity[x, y] = sum(input_pixels[x, y]) / 3
-
-    # Compute convolution between intensity and kernels
-    for x in range(1, image_list[0].width - 1):
-        for y in range(1, image_list[0].height - 1):
-            magx = intensity[x+1, y] - intensity[x-1, y]
-            magy = intensity[x, y + 1] - intensity[x, y - 1]
-
-            # Draw in black and white the magnitude
-            color = int(sqrt(magx**2 + magy**2))
-            draw.point((x, y), (color, color, color))
-    # output_image.save(r'./../Image folder/output.bmp')
 
 # Create difference Matrix from 2 or more Images
-diff_matrix= np.zeros_like(im_array[0])
+diff_matrix = np.zeros_like(im_array[0])
 for i in range(0, np.shape(im_array)[1]):
     for j in range(0, np.shape(im_array)[2]):
         diff_matrix[i][j] = abs(im_array[0][i][j] - im_array[4][i][j])
-
-print(diff_matrix)
+        if 100 > diff_matrix[i][j]:
+            diff_matrix[i][j] = 0
+        if diff_matrix[i][j] > 180:
+            diff_matrix[i][j] = 255
 
 plt.figure()
 plt.imshow(diff_matrix, cmap='gray')
+plt.savefig(r'./../Output folder/test.png')
 plt.show()
+print(diff_matrix)
+print(np.max(diff_matrix), np.min(diff_matrix))
+
+# Load image:
+#input_image = Image.open("input.png")
+input_image = Image.fromarray(diff_matrix, 'LA')
+
+# Output image:
+output_image = Image.new("LA", input_image.size)
+output_image.paste(input_image)
+plt.imshow(output_image, cmap='gray')
+plt.show()
+draw_result = ImageDraw.Draw(output_image)
+
+# Find circles
+rmin = 18
+rmax = 20
+steps = 100
+threshold = 0.4
+
+points = []
+for r in range(rmin, rmax + 1):
+    for t in range(steps):
+        points.append((r, int(r * cos(2 * pi * t / steps)), int(r * sin(2 * pi * t / steps))))
+
+acc = defaultdict(int)
+for x, y in canny_edge_detector(input_image):
+    for r, dx, dy in points:
+        a = x - dx
+        b = y - dy
+        acc[(a, b, r)] += 1
+
+circles = []
+for k, v in sorted(acc.items(), key=lambda i: -i[1]):
+    x, y, r = k
+    if v / steps >= threshold and all((x - xc) ** 2 + (y - yc) ** 2 > rc ** 2 for xc, yc, rc in circles):
+        print(v / steps, x, y, r)
+        circles.append((x, y, r))
+
+for x, y, r in circles:
+    draw_result.ellipse((x-r, y-r, x+r, y+r), outline=(255, 0, 0, 0))
+
