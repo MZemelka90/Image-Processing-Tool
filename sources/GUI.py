@@ -57,18 +57,14 @@ help_.add_command(label='About Tk', command=None)
 
 
 def open_file():
-    global files, file_name
+    global files, file_name, im_array, image_list
     file_name = tkinter.filedialog.askopenfilenames(filetypes=(("All files", "*"), ("Template files", "*.type")))
     filepath, filetype, files = [], [], []
     for i in range(0, len(file_name)):
         filepath.append(os.path.splitext(file_name[i])[0])
         filetype.append(os.path.splitext(file_name[i])[1])
         files.append(os.path.basename(file_name[i]))
-    return filetype, files
 
-
-def pre_processing():
-    global im_array, image_list
     # Sort & prepare Images
     # --------------------------------------------------------------------------------------------------------------------
     # Populate the variables option Menu
@@ -81,15 +77,15 @@ def pre_processing():
 
     # Make arrays from the BMP information
     for i in range(len(image_list)):
-        im_array.append(np.array(image_list[i], dtype='int64'))
+        im_array.append(np.array(image_list[i], dtype='int16'))
 
-    return image_list, im_array
+    return filetype, files, im_array, image_list
 
 
 def show_image():
 
     ax1.clear()
-    ax1.imshow(PIL.Image.open('./../Image folder/' + opt.get()))
+    ax1.imshow(PIL.Image.open('./../Image folder/' + opt.get()), cmap='gray')
     figure.canvas.draw()
 
 
@@ -102,12 +98,13 @@ def difference_matrix():
         for j in range(0, np.shape(im_array)[2]):
             diff_matrix[i][j] = abs(im_array[img_1][i][j] - im_array[img_2][i][j])
             if 100 > diff_matrix[i][j]:
-                diff_matrix[i][j] = 0
+                diff_matrix[i][j] = 20
             if diff_matrix[i][j] > 180:
-                diff_matrix[i][j] = 255
-
+                diff_matrix[i][j] = 250
+    print(np.min(diff_matrix), np.max(diff_matrix))
+    print(diff_matrix)
     ax2.clear()
-    ax2.imshow(diff_matrix, cmap='gray')
+    ax2.imshow(diff_matrix, cmap='gray', vmin=0, vmax=255)
     figure_2.canvas.draw()
     return diff_matrix
 
@@ -115,31 +112,34 @@ def difference_matrix():
 def save_diff_matrix():
     file_types = [('All Files', '*.*'),
              ('Image', '*.png'),
-             ('Bitmap', '*.bmp')]
+             ('Bitmap', '*.bmp'),
+             ('JPEG', '*.jpeg')
+                ]
     output_file = tkinter.filedialog.asksaveasfile(filetypes=file_types)
     output_file = output_file.name
-    print(output_file)
+    print(np.shape(output_file))
 
-    ax2.imshow(diff_matrix, cmap='gray')
+    ax2.imshow(diff_matrix, cmap='gray', vmin=0, vmax=255)
     figure_2.savefig(output_file)
 
 
-def detect_circles():
+def detect_circles(param1, param2, minRad, maxRad):
+    p1 = int(param1.get())
+    p2 = int(param2.get())
+    minR = int(minRad.get())
+    maxR = int(maxRad.get())
+
     # Read image.
-    img = cv2.imread(r'./../Output folder/' + opt.get(), cv2.IMREAD_COLOR)
+    img = cv2.imread(r'./../Image folder/' + opt.get(), cv2.IMREAD_GRAYSCALE)
     print(img)
-    print(np.min(img))
+    print(img.dtype)
+    print('Shape of the image is {}'.format(np.shape(img)))
+    print('Min. {}, Max. {}'.format(np.min(img), np.max(img)))
 
-    # Convert to grayscale.
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # Blur using 3 * 3 kernel.
-    # gray_blurred = cv2.blur(gray, (3, 3))
-
-    # Apply Hough transform on the blurred image.
-    detected_circles = cv2.HoughCircles(gray,
-                                        cv2.HOUGH_GRADIENT, 1, 20, param1=50,
-                                        param2=30, minRadius=1, maxRadius=40)
+    # Apply Hough transform on the image.
+    detected_circles = cv2.HoughCircles(img,
+                                        cv2.HOUGH_GRADIENT, 1, 45, param1=p1,
+                                        param2=p2, minRadius=minR, maxRadius=maxR)
 
     # Draw circles that are detected.
     if detected_circles is not None:
@@ -164,13 +164,12 @@ Image_Processing.config(menu=menubar)
 window1 = LabelFrame(Image_Processing, text='Image Processing', font=("Arial Bold", 12))
 window1.grid(row=0, column=0)
 
-button_1 = Button(window1, text="Setup", height=2, width=10, command=lambda: pre_processing())
-button_1.grid(row=0, column=0)
+
 button_2 = Button(window1, text="Image", height=2, width=10, command=lambda: show_image())
-button_2.grid(row=0, column=1)
+button_2.grid(row=0, column=0)
 button_3 = Button(window1, text="Difference", height=2, width=10, command=lambda: difference_matrix())
 button_3.grid(row=4, column=0)
-button_4 = Button(window1, text="Circle Detection", height=2, width=10, command=lambda: detect_circles())
+button_4 = Button(window1, text="Circle Detection", height=2, width=10, command=lambda: detect_circles(param1, param2, minRad, maxRad))
 button_4.grid(row=4, column=1)
 
 dummy = []
@@ -223,5 +222,25 @@ ax2 = figure_2.add_subplot(111)
 chart_type = FigureCanvasTkAgg(figure_2, windowPlot_2)
 chart_type.get_tk_widget().grid(padx=50, pady=0, columnspan=2)
 
+
+param1 = Entry(window1)
+param1.grid(row=8, column=1)
+param1.insert(0, 40)
+Label(window1, text='Param #1', anchor=W).grid(row=8, column=0)
+
+param2 = Entry(window1)
+param2.grid(row=9, column=1)
+param2.insert(0, 30)
+Label(window1, text='Param #2', anchor=W).grid(row=9, column=0)
+
+minRad = Entry(window1)
+minRad.grid(row=10, column=1)
+minRad.insert(0, 1)
+Label(window1, text='min circle Radius', anchor=W).grid(row=10, column=0)
+
+maxRad = Entry(window1)
+maxRad.grid(row=11, column=1)
+maxRad.insert(0, 50)
+Label(window1, text='max circle Radius', anchor=W).grid(row=11, column=0)
 
 Image_Processing.mainloop()
