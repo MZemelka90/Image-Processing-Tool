@@ -123,11 +123,17 @@ def save_diff_matrix():
     figure_2.savefig(output_file)
 
 
-def detect_circles(param1, param2, minRad, maxRad):
+def detect_circles(param1, param2, minRad, maxRad, xdist, ydist, pxpmmx, pxpmmy, v_particle, FPS):
+    xdist.delete(0, END)
+    ydist.delete(0, END)
+    v_particle.delete(0, END)
     p1 = int(param1.get())
     p2 = int(param2.get())
     minR = int(minRad.get())
     maxR = int(maxRad.get())
+    xfactor = float(pxpmmx.get())
+    yfactor = float(pxpmmy.get())
+    FPS = int(FPS.get())
 
     # Read image.
     img = cv2.imread(r'./../Image folder/' + opt.get(), cv2.IMREAD_GRAYSCALE)
@@ -136,11 +142,16 @@ def detect_circles(param1, param2, minRad, maxRad):
     print('Shape of the image is {}'.format(np.shape(img)))
     print('Min. {}, Max. {}'.format(np.min(img), np.max(img)))
 
+    # Remove Noise
+    img_blur = cv2.medianBlur(img, 5)
+
     # Apply Hough transform on the image.
-    detected_circles = cv2.HoughCircles(img,
+    detected_circles = cv2.HoughCircles(img_blur,
                                         cv2.HOUGH_GRADIENT, 1, 45, param1=p1,
                                         param2=p2, minRadius=minR, maxRadius=maxR)
-
+    print(detected_circles)
+    print(detected_circles[0][0][0])
+    print(detected_circles[0][-1][1])
     # Draw circles that are detected.
     if detected_circles is not None:
 
@@ -157,6 +168,14 @@ def detect_circles(param1, param2, minRad, maxRad):
             cv2.circle(img, (a, b), 1, (0, 0, 255), 3)
             cv2.imshow("Detected Circle", img)
             cv2.waitKey(0)
+    xdist_px = abs(float(detected_circles[0][0][0]) - float(detected_circles[0][-1][0])) / xfactor
+    ydist_px = abs(float(detected_circles[0][0][1]) - float(detected_circles[0][-1][1])) / yfactor
+    tot_dist = np.sqrt(xdist_px ** 2 + ydist_px ** 2)
+    xdist.insert(0, round(xdist_px, 3))
+    ydist.insert(0, round(ydist_px, 3))
+    v_particle.insert(0, round(tot_dist / (2 / FPS) * 10 ** (-3), 4))
+    return detected_circles, xdist, ydist
+
 
 # display Menu
 Image_Processing.config(menu=menubar)
@@ -169,7 +188,9 @@ button_2 = Button(window1, text="Image", height=2, width=10, command=lambda: sho
 button_2.grid(row=0, column=0)
 button_3 = Button(window1, text="Difference", height=2, width=10, command=lambda: difference_matrix())
 button_3.grid(row=4, column=0)
-button_4 = Button(window1, text="Circle Detection", height=2, width=10, command=lambda: detect_circles(param1, param2, minRad, maxRad))
+button_4 = Button(window1, text="Circle Detection", height=2, width=10, command=lambda: detect_circles(
+    param1, param2, minRad, maxRad, xdist, ydist, pxpmmx, pxpmmy, v_particle, FPS
+    ))
 button_4.grid(row=4, column=1)
 
 dummy = []
@@ -242,5 +263,20 @@ maxRad = Entry(window1)
 maxRad.grid(row=11, column=1)
 maxRad.insert(0, 50)
 Label(window1, text='max circle Radius', anchor=W).grid(row=11, column=0)
+
+xdist = Entry(window1)
+xdist.grid(row=12, column=1)
+xdist.insert(0, 0)
+Label(window1, text='x-Distance in px', anchor=W).grid(row=12, column=0)
+
+ydist = Entry(window1)
+ydist.grid(row=13, column=1)
+ydist.insert(0, 0)
+Label(window1, text='y-Distance in px', anchor=W).grid(row=13, column=0)
+
+v_particle = Entry(window1)
+v_particle.grid(row=14, column=1)
+v_particle.insert(0, 0)
+Label(window1, text='Particle Velocity [m/s]', anchor=W).grid(row=14, column=0)
 
 Image_Processing.mainloop()
