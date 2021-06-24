@@ -3,7 +3,6 @@ from PIL import ImageDraw
 import io
 import PIL.Image
 from math import sqrt, pi, cos, sin
-from canny import canny_edge_detector
 from collections import defaultdict
 import glob
 import cv2
@@ -123,9 +122,14 @@ def save_diff_matrix():
     figure_2.savefig(output_file)
 
 
-def detect_circles(param1, param2, minRad, maxRad, xdist, ydist, pxpmmx, pxpmmy, v_particle, FPS):
+def detect_circles(
+        param1, param2, minRad, maxRad, xdist,
+        ydist, pxpmmx, pxpmmy, v_particle, FPS, particle_diam, stokes,
+        viscosity, rho_fl, frame_num
+):
     xdist.delete(0, END)
     ydist.delete(0, END)
+    stokes.delete(0, END)
     v_particle.delete(0, END)
     p1 = int(param1.get())
     p2 = int(param2.get())
@@ -134,6 +138,9 @@ def detect_circles(param1, param2, minRad, maxRad, xdist, ydist, pxpmmx, pxpmmy,
     xfactor = float(pxpmmx.get())
     yfactor = float(pxpmmy.get())
     FPS = int(FPS.get())
+    viscos = float(viscosity.get())
+    rho_f = float(rho_fl.get())
+    frames = int(frame_num.get())
 
     # Read image.
     img = cv2.imread(r'./../Image folder/' + opt.get(), cv2.IMREAD_GRAYSCALE)
@@ -150,8 +157,6 @@ def detect_circles(param1, param2, minRad, maxRad, xdist, ydist, pxpmmx, pxpmmy,
                                         cv2.HOUGH_GRADIENT, 1, 45, param1=p1,
                                         param2=p2, minRadius=minR, maxRadius=maxR)
     print(detected_circles)
-    print(detected_circles[0][0][0])
-    print(detected_circles[0][-1][1])
     # Draw circles that are detected.
     if detected_circles is not None:
 
@@ -170,11 +175,19 @@ def detect_circles(param1, param2, minRad, maxRad, xdist, ydist, pxpmmx, pxpmmy,
             cv2.waitKey(0)
     xdist_px = abs(float(detected_circles[0][0][0]) - float(detected_circles[0][-1][0])) / xfactor
     ydist_px = abs(float(detected_circles[0][0][1]) - float(detected_circles[0][-1][1])) / yfactor
+    d_part = []
+    for i in range(0, np.shape(detected_circles)[1]):
+        d_part.append(float(detected_circles[0][i][-1]))
+    print(d_part)
     tot_dist = np.sqrt(xdist_px ** 2 + ydist_px ** 2)
     xdist.insert(0, round(xdist_px, 3))
     ydist.insert(0, round(ydist_px, 3))
-    v_particle.insert(0, round(tot_dist / (2 / FPS) * 10 ** (-3), 4))
-    return detected_circles, xdist, ydist
+    d_part_mm = [i / yfactor for i in d_part]
+    particle_diam.config(value=d_part_mm)
+    v_particle.insert(0, round(tot_dist / (frames / FPS) * 10 ** (-3), 4))
+    stokes_eq = 1 / 9 * np.mean(d_part_mm) * 10 ** (-3) * rho_f * float(v_particle.get()) / (viscos * 10 ** 3)
+    stokes.insert(0, round(stokes_eq, 3))
+    return detected_circles, xdist, ydist, d_part_mm, stokes_eq
 
 
 # display Menu
@@ -189,7 +202,8 @@ button_2.grid(row=0, column=0)
 button_3 = Button(window1, text="Difference", height=2, width=10, command=lambda: difference_matrix())
 button_3.grid(row=4, column=0)
 button_4 = Button(window1, text="Circle Detection", height=2, width=10, command=lambda: detect_circles(
-    param1, param2, minRad, maxRad, xdist, ydist, pxpmmx, pxpmmy, v_particle, FPS
+    param1, param2, minRad, maxRad, xdist, ydist, pxpmmx, pxpmmy,
+    v_particle, FPS, particle_diam, stokes, visc, rho_particle, frame_num
     ))
 button_4.grid(row=4, column=1)
 
@@ -278,5 +292,30 @@ v_particle = Entry(window1)
 v_particle.grid(row=14, column=1)
 v_particle.insert(0, 0)
 Label(window1, text='Particle Velocity [m/s]', anchor=W).grid(row=14, column=0)
+
+rho_particle = Entry(window1)
+rho_particle.grid(row=15, column=1)
+rho_particle.insert(0, 1560)
+Label(window1, text='Particle Density [kg/m³]', anchor=W).grid(row=15, column=0)
+
+visc = Entry(window1)
+visc.grid(row=16, column=1)
+visc.insert(0, 18.205e-6)
+Label(window1, text='Fluid Viscosity [Pa/s]', anchor=W).grid(row=16, column=0)
+
+particle_diam = ttk.Combobox(window1, value=dummy, state='readonly')
+particle_diam.config(width=15)
+particle_diam.grid(row=17, column=1)
+Label(window1, text='Particle Diamaeter [mm]', anchor=N).grid(row=17, column=0)
+
+stokes = Entry(window1)
+stokes.grid(row=18, column=1)
+stokes.insert(0, 0)
+Label(window1, text='Particle Stokes Number', anchor=W).grid(row=18, column=0)
+
+frame_num = Entry(window1)
+frame_num.grid(row=18, column=1)
+frame_num.insert(0, 1)
+Label(window1, text='Number of frames between Images', anchor=W).grid(row=18, column=0)
 
 Image_Processing.mainloop()
